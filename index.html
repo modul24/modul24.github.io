@@ -5,7 +5,7 @@
 'use strict';
 const portalUrl='https://script.google.com/macros/s/AKfycbyMhsBFUyntNFQoE6gJ8RgSbC57ajJZ8yPkyJ-5mXP5hZAJzerfvPQ_aCpR9X0xLeM-Mw/exec';
 const portalOrigin='https://n-2hjcnyqwdgrwujn2u4nyksl3cfg3o525otca5ji-0lu-script.googleusercontent.com';
-const embeddedByDefault=false;
+const embeddedByDefault=true;
 if(!embeddedByDefault&&new URL(location.href).searchParams.get('portal')!=='embedded'){
   location.replace(portalUrl);
 }else if(window.top===window){
