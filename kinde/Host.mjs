@@ -1,7 +1,8 @@
 import './FrameChannel.js';
-import {createSameTabLogin} from './BrowserAuth.mjs';
+import {createSameTabLogin} from './BrowserAuth.mjs?v=20261026-2';
 import {createConfirmedSessionStorage} from './ConfirmedSession.mjs';
 const status=document.getElementById('status');
+let phase='configuration';
 try{
   if(window.top!==window||location.origin!=='https://modul24.github.io'||!window.isSecureContext)throw Error('M24_KINDE_TOP');
   const {config}=await import('./config.local.mjs');
@@ -25,13 +26,19 @@ try{
       if(method==='forget')return remembered.clear(payload?.id||null);
       throw Error('M24_KINDE_METHOD');
     }});
+  phase='frame';
   const client=await channel.ready;
   addEventListener('storage',event=>{if(event.key===remembered.key||event.key===null)client.call('storageChanged',null).catch(()=>{});});
   login=createSameTabLogin({config,storage:sessionStorage,call:(method,payload)=>client.call(method,payload),navigate:url=>location.assign(url)});
   const callback=window.__m24KindeCallback;delete window.__m24KindeCallback;
-  if(callback)await login.callback(callback);
+  if(callback){phase='callback';await login.callback(callback);}
   status.hidden=true;
-}catch{
+}catch(error){
   status.textContent='Prijava trenutačno nije dostupna. Postojeći Modul24 ulaz ostaje dostupan.';
+  const known={M24_KINDE_CALLBACK:'callback-validation',M24_KINDE_LOGIN:'server-confirmation',
+    M24_KINDE_TIMEOUT:'channel-timeout',M24_KINDE_REMOTE:'receiver-rejected',M24_KINDE_HANDSHAKE:'frame-binding'};
+  const note=document.createElement('p');
+  note.textContent='Oznaka provjere: '+phase+'/'+(known[error?.message]||'unavailable')+'.';
+  status.append(note);
   const link=document.createElement('a');link.href='https://modul24.github.io/';link.textContent='Otvori postojeći ulaz';status.append(' ',link);
 }

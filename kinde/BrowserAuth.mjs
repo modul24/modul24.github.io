@@ -40,8 +40,14 @@ export function createSameTabLogin({config,storage,call,navigate,now=Date.now,sd
       try{p=JSON.parse(storage.getItem(pendingKey));}catch{clear();throw Error('M24_KINDE_CALLBACK');}
       clear();
       const params=new URLSearchParams(entries);
+      // Kinde's documented authorization-code response includes granted scope.
+      // It is metadata only: identity still comes from the server exchange.
+      const scopes=params.getAll('scope');
+      const validScope=scopes.length===0||(scopes.length===1&&scopes[0].length<=64&&
+        scopes[0].split(' ').filter(Boolean).sort().join(' ')==='email openid profile');
       if(!valid(p)||params.getAll('state').length!==1||params.getAll('code').length!==1||params.get('state')!==p.state||
-        params.has('error')||[...params.keys()].some(k=>!['code','state','session_state','iss'].includes(k))||
+        !validScope||params.getAll('iss').length>1||params.getAll('session_state').length>1||
+        params.has('error')||[...params.keys()].some(k=>!['code','state','session_state','iss','scope'].includes(k))||
         (params.has('iss')&&params.get('iss')!==config.issuer)||!/^[\x21-\x7e]{1,4096}$/.test(params.get('code')||''))throw Error('M24_KINDE_CALLBACK');
       const result=await call('complete',{requestId:p.requestId,code:params.get('code'),state:p.state,codeVerifier:p.codeVerifier});
       p.codeVerifier='';
