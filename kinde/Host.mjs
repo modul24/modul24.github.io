@@ -18,13 +18,23 @@ try{
   let login;
   const remembered=createConfirmedSessionStorage({getItem:key=>localStorage.getItem(key),
     setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
+  const notebookViewKey='modul24.kinde.notebook-location.v1';
+  const clearNotebookView=()=>{try{sessionStorage.removeItem(notebookViewKey);}catch{}};
   const channel=Modul24KindeFrames.accept({frame,ownOrigin:location.origin,peerOrigin:config.receiverOrigin,context,
-    methods:['login','logout','begin','complete','remember','restore','forget','storageChanged'],handle:async(method,payload)=>{
+    methods:['login','logout','begin','complete','remember','restore','forget','storageChanged','viewRead','viewWrite'],handle:async(method,payload)=>{
       if(method==='login'){await login.begin();return {ok:true};}
-      if(method==='logout'){login.logout();return {ok:true};}
+      if(method==='logout'){clearNotebookView();login.logout();return {ok:true};}
       if(method==='remember')return remembered.save(payload);
       if(method==='restore')return remembered.read();
-      if(method==='forget')return remembered.clear(payload?.id||null);
+      if(method==='forget'){clearNotebookView();return remembered.clear(payload?.id||null);}
+      if(method==='viewRead'){
+        if(payload!==null)throw Error('M24_KINDE_VIEW');
+        try{return sessionStorage.getItem(notebookViewKey)==='notebook'?'notebook':null;}catch{return null;}
+      }
+      if(method==='viewWrite'){
+        if(payload!==null&&payload!=='notebook')throw Error('M24_KINDE_VIEW');
+        try{if(payload)sessionStorage.setItem(notebookViewKey,payload);else clearNotebookView();return {ok:true};}catch{return {ok:false};}
+      }
       throw Error('M24_KINDE_METHOD');
     }});
   phase='frame';
