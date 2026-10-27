@@ -1,42 +1,14 @@
 <!doctype html>
 <html lang="hr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Modul24</title>
-<style>html,body{width:100%;height:100%;margin:0;background:#f4f7fa}iframe{display:block;width:100%;height:100%;border:0}noscript{font:18px system-ui;padding:24px;display:block}</style></head>
-<body><noscript>Za Modul24 uključi JavaScript.</noscript><script>
-'use strict';
-const portalUrl='https://script.google.com/macros/s/AKfycbyMhsBFUyntNFQoE6gJ8RgSbC57ajJZ8yPkyJ-5mXP5hZAJzerfvPQ_aCpR9X0xLeM-Mw/exec';
-const portalOrigin='https://n-2hjcnyqwdgrwujn2u4nyksl3cfg3o525otca5ji-0lu-script.googleusercontent.com';
-const embeddedByDefault=true;
-if(!embeddedByDefault&&new URL(location.href).searchParams.get('portal')!=='embedded'){
-  location.replace(portalUrl);
-}else if(window.top===window){
-  const frame=document.createElement('iframe');frame.title='Modul24';
-  const url=new URL(portalUrl);url.searchParams.set('host','modul24');
-  frame.src=url.href;
-  let source=null,nonce=null;
-  const sections=['login','home','users','subjects'];
-  function fromPortal(candidate){
-    try{for(let depth=0;candidate&&depth<5;depth++){
-      if(candidate===frame.contentWindow)return true;
-      const parent=candidate.parent;if(candidate===parent)return false;candidate=parent;
-    }}catch{}
-    return false;
-  }
-  window.addEventListener('message',event=>{
-    if(event.origin!==portalOrigin||!fromPortal(event.source))return;
-    const data=event.data;
-    if(data?.type==='m24.host.hello.v1'&&/^[a-f0-9]{64}$/.test(data.nonce)&&Object.keys(data).sort().join(',')==='nonce,type'){
-      source=event.source;nonce=data.nonce;
-      source.postMessage({type:'m24.host.ack.v1',nonce},portalOrigin);
-    }else if(source&&event.source===source&&data?.nonce===nonce&&data.type==='m24.host.history.v1'&&
-      sections.includes(data.page)&&typeof data.replace==='boolean'&&Object.keys(data).sort().join(',')==='nonce,page,replace,type'){
-      const method=data.replace?'replaceState':'pushState';
-      if(!data.replace&&history.state?.m24View===data.page)return;
-      history[method]({m24View:data.page},'');
-    }
-  });
-  window.addEventListener('popstate',event=>{
-    if(source&&sections.includes(event.state?.m24View))source.postMessage({type:'m24.host.pop.v1',nonce,page:event.state.m24View},portalOrigin);
-  });
-  document.body.append(frame);
-}
-</script></body></html>
+<script>
+// Runs before config, SDK, frames or other resources. Never log these values.
+(() => {const p=new URLSearchParams(location.search);window.__m24KindeCallback=p.has('code')||p.has('error')?[...p.entries()]:null;
+if(window.__m24KindeCallback)history.replaceState(null,'',location.pathname);})();
+</script>
+<style>
+html,body{margin:0;height:100%;background:#f4f7fa;font:16px system-ui}
+iframe{display:block;width:100%;height:100%;border:0}
+#status{position:fixed;inset:0;box-sizing:border-box;margin:0;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#f4f7fa;z-index:1}
+#status[hidden]{display:none}
+</style>
+</head><body><p id="status">Pripremam prijavu…</p><script type="module" src="/kinde/Host.mjs?v=20261027-1"></script><noscript>Za Modul24 uključi JavaScript.</noscript></body></html>

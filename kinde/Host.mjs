@@ -32,13 +32,15 @@ try{
   login=createSameTabLogin({config,storage:sessionStorage,call:(method,payload)=>client.call(method,payload),navigate:url=>location.assign(url)});
   const callback=window.__m24KindeCallback;delete window.__m24KindeCallback;
   if(callback){phase='callback';await login.callback(callback);}
+  // Keep the registered OAuth callback, then show the ordinary portal address.
+  if(['/index.html','/kinde/','/kinde/index.html','/kinde/callback.html'].includes(location.pathname))history.replaceState(null,'','/');
   status.hidden=true;
 }catch(error){
-  status.textContent='Prijava trenutačno nije dostupna. Postojeći Modul24 ulaz ostaje dostupan.';
+  status.textContent='Prijava trenutačno nije dostupna. Pokušaj ponovno.';
   const known={M24_KINDE_CALLBACK:'callback-validation',M24_KINDE_LOGIN:'server-confirmation',
     M24_KINDE_TIMEOUT:'channel-timeout',M24_KINDE_REMOTE:'receiver-rejected',M24_KINDE_HANDSHAKE:'frame-binding'};
   const note=document.createElement('p');
   note.textContent='Oznaka provjere: '+phase+'/'+(known[error?.message]||'unavailable')+'.';
   status.append(note);
-  const link=document.createElement('a');link.href='https://modul24.github.io/';link.textContent='Otvori postojeći ulaz';status.append(' ',link);
+  const link=document.createElement('a');link.href='https://modul24.github.io/';link.textContent='Ponovno otvori Modul24';status.append(' ',link);
 }
