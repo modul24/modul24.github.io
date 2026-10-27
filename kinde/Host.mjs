@@ -1,4 +1,5 @@
 import './FrameChannel.js';
+import './Location.js';
 import {createSameTabLogin} from './BrowserAuth.mjs?v=20261026-2';
 import {createConfirmedSessionStorage} from './ConfirmedSession.mjs';
 const status=document.getElementById('status');
@@ -18,8 +19,8 @@ try{
   let login;
   const remembered=createConfirmedSessionStorage({getItem:key=>localStorage.getItem(key),
     setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
-  const notebookViewKey='modul24.kinde.notebook-location.v1';
-  const clearNotebookView=()=>{try{sessionStorage.removeItem(notebookViewKey);}catch{}};
+  const viewKey='modul24.kinde.location.v2',oldViewKey='modul24.kinde.notebook-location.v1';
+  const clearNotebookView=()=>{try{sessionStorage.removeItem(viewKey);sessionStorage.removeItem(oldViewKey);}catch{}};
   const channel=Modul24KindeFrames.accept({frame,ownOrigin:location.origin,peerOrigin:config.receiverOrigin,context,
     methods:['login','logout','begin','complete','remember','restore','forget','storageChanged','viewRead','viewWrite'],handle:async(method,payload)=>{
       if(method==='login'){await login.begin();return {ok:true};}
@@ -29,11 +30,11 @@ try{
       if(method==='forget'){clearNotebookView();return remembered.clear(payload?.id||null);}
       if(method==='viewRead'){
         if(payload!==null)throw Error('M24_KINDE_VIEW');
-        try{return sessionStorage.getItem(notebookViewKey)==='notebook'?'notebook':null;}catch{return null;}
+        try{return Modul24Location.clean(JSON.parse(sessionStorage.getItem(viewKey)||'null'))||Modul24Location.clean(sessionStorage.getItem(oldViewKey));}catch{return null;}
       }
       if(method==='viewWrite'){
-        if(payload!==null&&payload!=='notebook')throw Error('M24_KINDE_VIEW');
-        try{if(payload)sessionStorage.setItem(notebookViewKey,payload);else clearNotebookView();return {ok:true};}catch{return {ok:false};}
+        const value=Modul24Location.clean(payload);if(payload!==null&&!value)throw Error('M24_KINDE_VIEW');
+        try{clearNotebookView();if(value)sessionStorage.setItem(viewKey,JSON.stringify(value));return {ok:true};}catch{return {ok:false};}
       }
       throw Error('M24_KINDE_METHOD');
     }});
