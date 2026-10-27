@@ -35,11 +35,12 @@
       d.ok?p.resolve(d.value):p.reject(Error('M24_KINDE_REMOTE'));
     };
     port.onmessageerror=close;port.start();
-    return Object.freeze({close,call(method,payload){
-      if(closed||!methods.includes(method)||pending.size>=4||seq>=1000000)return Promise.reject(Error('M24_KINDE_CHANNEL'));
+    return Object.freeze({close,call(method,payload,timeoutMs=30000){
+      if(closed||!methods.includes(method)||pending.size>=4||seq>=1000000||
+        ![30000,45000].includes(timeoutMs))return Promise.reject(Error('M24_KINDE_CHANNEL'));
       const id=++seq;
       return new Promise((resolve,reject)=>{
-        const timer=win.setTimeout(()=>{pending.delete(id);reject(Error('M24_KINDE_TIMEOUT'));},30000);
+        const timer=win.setTimeout(()=>{pending.delete(id);reject(Error('M24_KINDE_TIMEOUT'));},timeoutMs);
         pending.set(id,{resolve,reject,timer});port.postMessage({context,nonce,seq:id,method,payload});
       });
     }});
