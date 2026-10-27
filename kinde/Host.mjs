@@ -10,6 +10,7 @@ try{
   if(receiverUrl.origin!=='https://script.google.com'||!/^\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(receiverUrl.pathname)||
     new URL(config.receiverOrigin).origin!==config.receiverOrigin||!config.receiverOrigin.endsWith('.googleusercontent.com'))throw Error('M24_KINDE_CONFIG');
   const frame=document.createElement('iframe');frame.title='Modul24';
+  frame.allow='fullscreen *';frame.allowFullscreen=true;
   const context=Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');
   receiverUrl.searchParams.set('kindePreview','1');receiverUrl.searchParams.set('context',context);frame.src=receiverUrl.href;
   if(window.__m24KindeCallback){receiverUrl.searchParams.set('authReturn','1');frame.src=receiverUrl.href;}
