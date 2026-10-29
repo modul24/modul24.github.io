@@ -1,9 +1,9 @@
-import './FrameChannel.js';
+import './FrameChannel.js?v=20261029-2';
 import './Location.js?v=20261029-1';
 import {createSameTabLogin} from './BrowserAuth.mjs?v=20261026-2';
 import {createConfirmedSessionStorage} from './ConfirmedSession.mjs';
 const status=document.getElementById('status');
-let phase='configuration';
+let phase='configuration',bootHint=null,observeFrame=null;const frameEvidence={loaded:false,hello:false,originMatched:null};
 try{
   if(window.top!==window||location.origin!=='https://modul24.github.io'||!window.isSecureContext)throw Error('M24_KINDE_TOP');
   const {config}=await import('./config.local.mjs');
@@ -15,13 +15,16 @@ try{
   const context=Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');
   receiverUrl.searchParams.set('kindePreview','1');receiverUrl.searchParams.set('context',context);frame.src=receiverUrl.href;
   if(window.__m24KindeCallback){receiverUrl.searchParams.set('authReturn','1');frame.src=receiverUrl.href;}
+  frame.addEventListener('load',()=>{frameEvidence.loaded=true;});
   document.body.append(frame);
+  observeFrame=event=>{const d=event.data;if(d?.type==='m24.kinde.hello.v1'&&d.context===context&&/^[a-f0-9]{64}$/.test(d.nonce)&&Modul24KindeFrames.within(event.source,frame.contentWindow)){frameEvidence.hello=true;frameEvidence.originMatched=event.origin===config.receiverOrigin;}};
+  window.addEventListener('message',observeFrame);
   let login;
   const remembered=createConfirmedSessionStorage({getItem:key=>localStorage.getItem(key),
     setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
   const viewKey='modul24.kinde.location.v2',oldViewKey='modul24.kinde.notebook-location.v1';
   const clearNotebookView=()=>{try{sessionStorage.removeItem(viewKey);sessionStorage.removeItem(oldViewKey);}catch{}};
-  const channel=Modul24KindeFrames.accept({frame,ownOrigin:location.origin,peerOrigin:config.receiverOrigin,context,
+  const channel=Modul24KindeFrames.accept({frame,readyTimeoutMs:90000,ownOrigin:location.origin,peerOrigin:config.receiverOrigin,context,
     methods:['login','logout','begin','complete','remember','restore','forget','storageChanged','viewRead','viewWrite'],handle:async(method,payload)=>{
       if(method==='login'){await login.begin();return {ok:true};}
       if(method==='logout'){clearNotebookView();login.logout();return {ok:true};}
@@ -39,7 +42,8 @@ try{
       throw Error('M24_KINDE_METHOD');
     }});
   phase='frame';
-  const client=await channel.ready;
+  bootHint=setTimeout(()=>{status.firstChild.textContent='Školska aplikacija još se učitava. Pričekaj trenutak…';},45000);
+  const client=await channel.ready;clearTimeout(bootHint);window.removeEventListener('message',observeFrame);
   addEventListener('storage',event=>{if(event.key===remembered.key||event.key===null)client.call('storageChanged',null).catch(()=>{});});
   login=createSameTabLogin({config,storage:sessionStorage,call:(method,payload)=>client.call(method,payload),navigate:url=>location.assign(url)});
   const callback=window.__m24KindeCallback;delete window.__m24KindeCallback;
@@ -52,7 +56,10 @@ try{
   const known={M24_KINDE_CALLBACK:'callback-validation',M24_KINDE_LOGIN:'server-confirmation',
     M24_KINDE_TIMEOUT:'channel-timeout',M24_KINDE_REMOTE:'receiver-rejected',M24_KINDE_HANDSHAKE:'frame-binding'};
   const note=document.createElement('p');
-  note.textContent='Oznaka provjere: '+phase+'/'+(known[error?.message]||'unavailable')+'.';
+  const reason=phase==='frame'&&error?.message==='M24_KINDE_HANDSHAKE'?(frameEvidence.hello&&frameEvidence.originMatched===false?'origin-pin-mismatch':!frameEvidence.hello?'receiver-not-ready':'frame-binding'):(known[error?.message]||'unavailable');
+  note.textContent='Oznaka provjere: '+phase+'/'+reason+'.';
   status.append(note);
   const link=document.createElement('a');link.href='https://modul24.github.io/';link.textContent='Ponovno otvori Modul24';status.append(' ',link);
 }
+
+finally{clearTimeout(bootHint);if(observeFrame)window.removeEventListener('message',observeFrame);}

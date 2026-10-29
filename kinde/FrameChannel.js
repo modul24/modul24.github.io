@@ -45,12 +45,13 @@
       });
     }});
   }
-  function accept({win=window,frame,ownOrigin,peerOrigin,context,methods,handle,onReady=()=>{}}){
+  function accept({win=window,frame,ownOrigin,peerOrigin,context,methods,handle,onReady=()=>{},readyTimeoutMs=30000}){
     config(win,ownOrigin,peerOrigin,context);
     if(frame?.ownerDocument!==win.document||!frame.contentWindow)throw Error('M24_KINDE_FRAME');
+    if(![30000,90000].includes(readyTimeoutMs))throw Error('M24_KINDE_HANDSHAKE_WINDOW');
     const container=frame.contentWindow;let port=null,client=null,closed=false,resolveReady,rejectReady;
     const ready=new Promise((resolve,reject)=>{resolveReady=resolve;rejectReady=reject;});
-    const timer=win.setTimeout(close,30000);
+    const timer=win.setTimeout(close,readyTimeoutMs);
     function close(){if(closed)return;closed=true;win.clearTimeout(timer);win.removeEventListener('message',message);client?.close();port?.close();rejectReady(Error('M24_KINDE_HANDSHAKE'));}
     function message(event){
       const d=event.data;
