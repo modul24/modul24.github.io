@@ -1,5 +1,5 @@
 import './FrameChannel.js';
-import './Location.js';
+import './Location.js?v=20261029-1';
 import {createSameTabLogin} from './BrowserAuth.mjs?v=20261026-2';
 import {createConfirmedSessionStorage} from './ConfirmedSession.mjs';
 const status=document.getElementById('status');

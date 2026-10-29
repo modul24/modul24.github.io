@@ -14,10 +14,11 @@
     }else if(value.area==='cvrstoca'){
       if(!['home','notebook','lessons','exams','results'].includes(value.page))return null;
       if(value.page==='exams'){allowed.push('recordId');if(value.recordId!==undefined){if(!id(value.recordId))return null;out.recordId=value.recordId;}}
-    }else if(value.area==='cad'){
+    }else if(['cad','strength','mechanics'].includes(value.area)){
       if(!['home','interactive','exams'].includes(value.page))return null;
       if(value.page==='exams'){
-        allowed.push('view','recordId','module');
+        allowed.push('view','recordId','module','step');
+        if(value.step!==undefined){if(value.view!=='edit'||!Number.isInteger(value.step)||value.step<0||value.step>2)return null;out.step=value.step;}
         if(!['list','edit','results','monitor','review','attempt'].includes(value.view))return null;out.view=value.view;
         if(value.recordId!==undefined){if(!id(value.recordId))return null;out.recordId=value.recordId;}
         if(['review','attempt'].includes(value.view)&&!out.recordId)return null;
