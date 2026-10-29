@@ -3,7 +3,8 @@ import './Location.js?v=20261029-1';
 import {createSameTabLogin} from './BrowserAuth.mjs?v=20261026-2';
 import {createConfirmedSessionStorage} from './ConfirmedSession.mjs';
 const status=document.getElementById('status');
-let phase='configuration',bootHint=null,observeFrame=null;const frameEvidence={loaded:false,hello:false,originMatched:null};
+let phase='configuration',bootHint=null,observeFrame=null,channel=null;
+const frameEvidence={loaded:false,hello:false,originMatched:null,failure:null,line:0};
 try{
   if(window.top!==window||location.origin!=='https://modul24.github.io'||!window.isSecureContext)throw Error('M24_KINDE_TOP');
   const {config}=await import('./config.local.mjs');
@@ -17,14 +18,25 @@ try{
   if(window.__m24KindeCallback){receiverUrl.searchParams.set('authReturn','1');frame.src=receiverUrl.href;}
   frame.addEventListener('load',()=>{frameEvidence.loaded=true;});
   document.body.append(frame);
-  observeFrame=event=>{const d=event.data;if(d?.type==='m24.kinde.hello.v1'&&d.context===context&&/^[a-f0-9]{64}$/.test(d.nonce)&&Modul24KindeFrames.within(event.source,frame.contentWindow)){frameEvidence.hello=true;frameEvidence.originMatched=event.origin===config.receiverOrigin;}};
+  observeFrame=event=>{
+    const d=event.data;if(!d||d.context!==context||!Modul24KindeFrames.within(event.source,frame.contentWindow))return;
+    if(d.type==='m24.kinde.hello.v1'&&/^[a-f0-9]{64}$/.test(d.nonce)){
+      frameEvidence.hello=true;frameEvidence.originMatched=event.origin===config.receiverOrigin;return;
+    }
+    // A diagnostic can only stop startup; it can never authenticate a frame.
+    if(d.type!=='m24.kinde.boot.v1'||Object.keys(d).sort().join(',')!=='context,line,stage,type'||
+      !['origin-pin-mismatch','client-syntax','client-reference','client-type','client-error','client-rejection','handshake-failed'].includes(d.stage)||
+      !Number.isSafeInteger(d.line)||d.line<0||d.line>50000)return;
+    frameEvidence.failure=event.origin===config.receiverOrigin?d.stage:'origin-pin-mismatch';
+    frameEvidence.line=event.origin===config.receiverOrigin?d.line:0;channel?.close();
+  };
   window.addEventListener('message',observeFrame);
   let login;
   const remembered=createConfirmedSessionStorage({getItem:key=>localStorage.getItem(key),
     setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
   const viewKey='modul24.kinde.location.v2',oldViewKey='modul24.kinde.notebook-location.v1';
   const clearNotebookView=()=>{try{sessionStorage.removeItem(viewKey);sessionStorage.removeItem(oldViewKey);}catch{}};
-  const channel=Modul24KindeFrames.accept({frame,readyTimeoutMs:90000,ownOrigin:location.origin,peerOrigin:config.receiverOrigin,context,
+  channel=Modul24KindeFrames.accept({frame,readyTimeoutMs:90000,ownOrigin:location.origin,peerOrigin:config.receiverOrigin,context,
     methods:['login','logout','begin','complete','remember','restore','forget','storageChanged','viewRead','viewWrite'],handle:async(method,payload)=>{
       if(method==='login'){await login.begin();return {ok:true};}
       if(method==='logout'){clearNotebookView();login.logout();return {ok:true};}
@@ -56,8 +68,8 @@ try{
   const known={M24_KINDE_CALLBACK:'callback-validation',M24_KINDE_LOGIN:'server-confirmation',
     M24_KINDE_TIMEOUT:'channel-timeout',M24_KINDE_REMOTE:'receiver-rejected',M24_KINDE_HANDSHAKE:'frame-binding'};
   const note=document.createElement('p');
-  const reason=phase==='frame'&&error?.message==='M24_KINDE_HANDSHAKE'?(frameEvidence.hello&&frameEvidence.originMatched===false?'origin-pin-mismatch':!frameEvidence.hello?'receiver-not-ready':'frame-binding'):(known[error?.message]||'unavailable');
-  note.textContent='Oznaka provjere: '+phase+'/'+reason+'.';
+  const reason=phase==='frame'&&error?.message==='M24_KINDE_HANDSHAKE'?(frameEvidence.failure||(frameEvidence.hello&&frameEvidence.originMatched===false?'origin-pin-mismatch':!frameEvidence.hello?'receiver-not-ready':'frame-binding')):(known[error?.message]||'unavailable');
+  note.textContent='Oznaka provjere: '+phase+'/'+reason+(frameEvidence.failure&&frameEvidence.line?'/'+frameEvidence.line:'')+'.';
   status.append(note);
   const link=document.createElement('a');link.href='https://modul24.github.io/';link.textContent='Ponovno otvori Modul24';status.append(' ',link);
 }
